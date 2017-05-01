@@ -9,6 +9,7 @@ from jsonview.decorators import json_view
 from jsonview.exceptions import BadRequest
 from ipware.ip import get_real_ip
 from netaddr import IPNetwork
+from netaddr import IPAddress
 import svgwrite
 import math
 
@@ -34,9 +35,11 @@ def locate_api(request):
     ip = ip_fallback(request)
     if not ip:
         raise BadRequest("No IP provided")
+    ip = IPAddress(ip)
 
     coords = ip_to_xy(ip)
-    qs = IPRange.objects.filter(cidr__net_contains=ip)[:64]
+    ipv6 = ip.ipv6()
+    qs = IPRange.objects.filter(cidr__net_contains=ipv6)[:64]
     return {
         'ip':str(ip),
         'coordinates' : {
@@ -101,7 +104,6 @@ def render_tile(request, zoom, x, y):
                 fill = "rgb(200,200,200)")
     svg_doc.add(rect)
 
-
     for rng in ranges_to_display:
         if rng.level % 2 == 0:
             # even prefix lengths are represented by squares
@@ -145,6 +147,19 @@ def render_tile(request, zoom, x, y):
                     fill = "rgb(255,0,255)",
                     fill_opacity="0.4")
         svg_doc.add(rect)
+
+        # if we have enough space, let's write the name of the
+        # institution
+        name = rng.short_label
+        if sizex >= 8*len(name):
+            txt = svg_doc.text(name,
+                insert=(scale*(x-origx)+sizex/2,
+                      scale*(y-origy)+sizey/2),
+                dominant_baseline="middle",
+                text_anchor="middle",
+                font_size="10",
+                opacity="0.8")
+            svg_doc.add(txt)
 
     return HttpResponse(svg_doc.tostring(), content_type="image/svg+xml")
 
