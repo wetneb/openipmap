@@ -53,6 +53,7 @@ def slippy_map(request):
         'ip': ip,
         'coords': ip_to_xy(ip) if ip else None,
         'map_size': max_2d_coord,
+        'map_sqrt_size': (1 << 32),
         'min_zoom': -int(math.log((max_2d_coord / 1024),2)+1)
     }
     return render(request, 'wdipranges/slippy.html', context)
@@ -64,12 +65,14 @@ def render_tile(request, zoom, x, y):
 
     # Convert x y z to an IP range
     zoom = tile_form.cleaned_data['zoom']
+    zoom += 32
     origx = tile_form.cleaned_data['x'] << (64-zoom)
     origy = tile_form.cleaned_data['y'] << (64-zoom)
     if origx < 0 or origy < 0 or origx >= max_2d_coord or origy >= max_2d_coord:
         raise Http404('Tile is out of bounds')
 
     bounding_range = xyz_to_ip_range((origx, origy, zoom))
+    print(bounding_range)
 
     # Request all supernets
     supernets = IPRange.objects.filter(
@@ -77,6 +80,7 @@ def render_tile(request, zoom, x, y):
 
     # Request the current range
     current_range = IPRange.objects.filter(cidr=str(bounding_range))
+    print(current_range)
 
     # Request all ranges within that range, up to a certain zoom level
     ranges = IPRange.objects.filter(

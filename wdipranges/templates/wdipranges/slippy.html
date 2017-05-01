@@ -23,7 +23,7 @@
 		<div id='map'></div>
 
 		<script>
-			var mapSize = {{ map_size }};
+			var mapSize = {{ map_sqrt_size }};
 			function leafletCoords(coords) {
 				var x = coords[0] / mapSize * 256;
 				var y = ( - coords[1] / mapSize) * 256;
@@ -34,26 +34,47 @@
 				var y = (- (coords[0] / 256.)) * mapSize;
 				return [x,y];
 			}
+			var ipv4view = leafletCoords([16744448,32768]).concat([18]);
+			var ipv6view = leafletCoords([9223372036854775808,9223372036854775808]).concat([-30]);
+			console.log(ipv4view);
 
-			var map = L.map('map', { crs: L.CRS.Simple,
-			minZoom: 0,
-			maxZoom: 60,
-			}).setView(leafletCoords([16711680,0]), 46);
+			var map = L.map('map', {
+			    crs: L.CRS.Simple,
+			    minZoom: -32,
+			    maxZoom: 32,
+			});
 
-			var bounds = [[0,0], [{{ map_size }},{{ map_size }}]];
-
-			L.tileLayer('iptile-{z}-{x}-{y}.svg', {
-			attribution: 'Map data &copy; <a href="https://www.wikidata.org">Wikidata</a>',
-			continuousWorld: true,
-			noWrap: true,
+			L.tileLayer('iptile/{z}/{x}/{y}.svg', {
+			    attribution: 'Map data &copy; <a href="https://www.wikidata.org">Wikidata</a>',
+			    continuousWorld: true,
+			    noWrap: true,
+			    minZoom: -32,
+			    maxZoom: 32,
 			}).addTo(map);
 
+			function gotoCoords(coords) {
+			    map.setView([coords[0],coords[1]],coords[2]);
+			}
+			gotoCoords(ipv4view);
+			
+			var ipv4or6control = L.control({position: 'topright'});
+			ipv4or6control.onAdd = function (map) {
+			    var div = L.DomUtil.create('div', 'leaflet-bar');
+			    div.innerHTML = '<a onclick="gotoCoords(ipv4view)">IPv4</a>'+
+				'<a onclick="gotoCoords(ipv6view)">IPv6</a>';
+			    return div;
+			}
+			ipv4or6control.addTo(map);
+				
+
+			/* Displaying coordinates passed as argument */
 			{% if coords %}
 			var pointer = L.latLng(leafletCoords([ {{ coords.0 }}, {{ coords.1 }} ]));
 			var marker = L.marker(pointer).addTo(map);
 			marker.bindPopup("{{ ip|escapejs }}");
 			{% endif %}
 
+			/* Wikipedia edits */
 			function incomingWikipediaEdit(event) {
 			    var message = JSON.parse(event.data);
 			    if(message.is_anon) {
@@ -75,7 +96,6 @@
 				console.log(event);				
 			}
 			
-			/* Wikipedia edits */
 			var socket = new WebSocket('ws://wikimon.hatnote.com:9050');
 			socket.onmessage = incomingWikipediaEdit;
 			var socket = new WebSocket('ws://wikimon.hatnote.com:9010');

@@ -1,5 +1,6 @@
 from django.db import models
 import netfields
+from netaddr import IPNetwork
 from SPARQLWrapper import SPARQLWrapper, JSON
 from .utils import to_q
 
