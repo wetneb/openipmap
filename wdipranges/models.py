@@ -51,7 +51,7 @@ class IPRange(models.Model):
         instances = []
         for result in results['results']['bindings']:
             qid = to_q(result['qid']['value'])
-            cidr = result['cidr']['value']
+            cidr = str(IPNetwork(str(result['cidr']['value'])).ipv6())
             instances.append(cls(qid=qid, cidr=cidr))
 
         # recreate everything

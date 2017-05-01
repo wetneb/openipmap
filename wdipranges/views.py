@@ -64,8 +64,8 @@ def render_tile(request, zoom, x, y):
 
     # Convert x y z to an IP range
     zoom = tile_form.cleaned_data['zoom']
-    origx = tile_form.cleaned_data['x'] << (16-zoom)
-    origy = tile_form.cleaned_data['y'] << (16-zoom)
+    origx = tile_form.cleaned_data['x'] << (64-zoom)
+    origy = tile_form.cleaned_data['y'] << (64-zoom)
     if origx < 0 or origy < 0 or origx >= max_2d_coord or origy >= max_2d_coord:
         raise Http404('Tile is out of bounds')
 
@@ -89,7 +89,7 @@ def render_tile(request, zoom, x, y):
     # Draw the SVG
     size = 256
     svg_doc = svgwrite.Drawing(size=(size,size))
-    scale = float(size) / (1 << (16 - zoom))
+    scale = float(size) / (1 << (64 - zoom))
 
     # background color
     rect = svg_doc.rect(insert = (0, 0),
@@ -102,20 +102,20 @@ def render_tile(request, zoom, x, y):
         if rng.level % 2 == 0:
             # even prefix lengths are represented by squares
             x, y, z = ip_range_to_xyz(str(rng.cidr))
-            size = scale*(1 << (16 - z))
+            size = scale*(1 << (64 - z))
             sizex = size
             sizey = size
         else:
             # odd prefix lengths are represented by two concatenated
             # squares
             z = rng.level
-            size = scale*(1 << (16 - int((z+1)/2)))
+            size = scale*(1 << (64 - int((z+1)/2)))
 
             # split the IP network in two
             first_block = IPNetwork(str(rng.cidr))
             first_block.prefixlen = first_block.prefixlen+1
             next_block = IPNetwork(str(first_block))
-            next_block.value = first_block.value + (1 << (32 - first_block.prefixlen))
+            next_block.value = first_block.value + (1 << (128 - first_block.prefixlen))
 
             # compute the coordinates of both parts
             x1, y1, z1 = ip_range_to_xyz(str(first_block))

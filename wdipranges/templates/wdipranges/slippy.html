@@ -35,7 +35,10 @@
 				return [x,y];
 			}
 
-			var map = L.map('map', { crs: L.CRS.Simple }).setView([-128,128], 2);
+			var map = L.map('map', { crs: L.CRS.Simple,
+			minZoom: 0,
+			maxZoom: 60,
+			}).setView(leafletCoords([16711680,0]), 46);
 
 			var bounds = [[0,0], [{{ map_size }},{{ map_size }}]];
 
@@ -47,7 +50,8 @@
 
 			{% if coords %}
 			var pointer = L.latLng(leafletCoords([ {{ coords.0 }}, {{ coords.1 }} ]));
-			L.marker(pointer).addTo(map);
+			var marker = L.marker(pointer).addTo(map);
+			marker.bindPopup("{{ ip|escapejs }}");
 			{% endif %}
 
 			function incomingWikipediaEdit(event) {

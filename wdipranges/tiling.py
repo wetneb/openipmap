@@ -3,7 +3,7 @@ from netaddr import IPNetwork
 from netaddr import IPRange
 
 # Max 2D X or Y coordinate
-max_2d_coord = 1<<16
+max_2d_coord = 1<<64
 # We have 2^32 IP addresses to display on a 2D square,
 # So we use 2^16 as length for each side.
 
@@ -51,9 +51,10 @@ def ip_range_to_xyz(ip_network):
         ip_network = IPNetwork(ip_network)
     if ip_network.prefixlen % 2:
         raise ValueError('Odd prefixlen: no associated tile')
+    ip_network = ip_network.ipv6()
 
     z = int(ip_network.prefixlen/2)
-    shift = 16 - z
+    shift = 64 - z
     path_length = int(ip_network.ip) >> (2*shift)
     x, y = to_hilbert(path_length, z)
     return (x << shift), (y << shift), z
@@ -64,8 +65,8 @@ def xyz_to_ip_range(tup):
     Converts tile coordinates and zoom to an IP range
     """
     x, y, z = tup
-    ip = IPNetwork('0.0.0.0/0')
-    shift = 16 - z
+    ip = IPNetwork('::/0')
+    shift = 64 - z
     ip.value = from_hilbert(x >> shift, y >> shift, z) << (2*shift)
     ip.prefixlen = 2*z
     return ip
