@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>WDIP</title>
+		<link rel="stylesheet"
+	    href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css"
+	    integrity="sha512-07I2e+7D8p6he1SIM+1twR5TIrhUQn9+I6yjqD53JQjFiMf8EtC93ty0/5vJTZGF8aAocvHYNEDJajGdNx1IsQ=="
+	    crossorigin=""/>
+		<script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"
+	    integrity="sha512-A7vV8IFfih/D732iSSKi20u/ooOfj/AGehOKq0f4vLT1Zr2Y+RX7C+w8A1gaSasGtRUZpF/NZgzSAu4/Gc41Lg=="
+	    crossorigin=""></script>
+		<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+	    <style>
+		    #map {
+			    width: 1024px;
+			    height: 1024px;
+		    }
+	    </style>
+	</head>
+	<body>
+		<div id='map'></div>
+
+		<script>
+			var mapSize = {{ map_size }};
+			function leafletCoords(coords) {
+				var x = coords[0] / mapSize * 256;
+				var y = ( - coords[1] / mapSize) * 256;
+				return [y,x];
+			}
+			function ipCoords(coords) {
+				var x = coords[1] * mapSize / 256;
+				var y = (- (coords[0] / 256.)) * mapSize;
+				return [x,y];
+			}
+
+			var map = L.map('map', { crs: L.CRS.Simple }).setView([-128,128], 2);
+
+			var bounds = [[0,0], [{{ map_size }},{{ map_size }}]];
+
+			L.tileLayer('iptile-{z}-{x}-{y}.svg', {
+			attribution: 'Map data &copy; <a href="https://www.wikidata.org">Wikidata</a>',
+			continuousWorld: true,
+			noWrap: true,
+			}).addTo(map);
+
+			{% if coords %}
+			var pointer = L.latLng(leafletCoords([ {{ coords.0 }}, {{ coords.1 }} ]));
+			L.marker(pointer).addTo(map);
+			{% endif %}
+
+			function incomingWikipediaEdit(event) {
+			    var message = JSON.parse(event.data);
+			    if(message.is_anon) {
+				$.get('/locate', {'ip':message.user},
+				   success=function(data){ displayEdit(data, message) }
+				)
+			    }
+			};
+		
+			function displayEdit(locate_data, event) {
+				var pointer=L.latLng(leafletCoords(
+				[locate_data.coordinates.x,
+				 locate_data.coordinates.y]
+				));
+				var marker = L.marker(pointer).addTo(map);
+				marker.bindPopup(locate_data.ip
+				+'<br/>on <a href="'+event.url+'" target="_blank">'
+				+event.page_title+'</a>');
+				console.log(event);				
+			}
+			
+			/* Wikipedia edits */
+			var socket = new WebSocket('ws://wikimon.hatnote.com:9050');
+			socket.onmessage = incomingWikipediaEdit;
+			var socket = new WebSocket('ws://wikimon.hatnote.com:9010');
+			socket.onmessage = incomingWikipediaEdit;
+		</script>
+	</body>
+</html>
+
+	
