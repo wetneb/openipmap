@@ -93,7 +93,8 @@
 				marker.bindPopup(locate_data.ip
 				+'<br/>on <a href="'+event.url+'" target="_blank">'
 				+event.page_title+'</a>');
-				console.log(event);				
+				setTimeout(function(){ marker.remove(); }, 60000);
+				var circle = L.circleMarker(pointer, { radius : 50 }).addTo(map);
 			}
 			
 			var socket = new WebSocket('ws://wikimon.hatnote.com:9050');

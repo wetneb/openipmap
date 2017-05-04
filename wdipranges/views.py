@@ -61,6 +61,24 @@ def slippy_map(request):
     }
     return render(request, 'wdipranges/slippy.html', context)
 
+class BoundingBox(object):
+    def __init__(self, x, y, sx, sy):
+        self.x = x
+        self.y = y
+        self.sx = sx
+        self.sy = sy
+
+    @classmethod
+    def centered(cls, cx, cy, sx, sy):
+        return cls(cx - (sx/2), cy - (sy/2), sx, sy)
+
+    def intersects(self, other):
+        return not (
+            other.x+other.sx <= self.x or
+            other.x >= self.x + self.sx or
+            other.y+other.sy <= self.y or
+            other.y >= self.y + self.sy)
+
 def render_tile(request, zoom, x, y):
     tile_form = TileForm({'zoom':zoom,'x':x,'y':y})
     if not tile_form.is_valid():
@@ -75,7 +93,6 @@ def render_tile(request, zoom, x, y):
         raise Http404('Tile is out of bounds')
 
     bounding_range = xyz_to_ip_range((origx, origy, zoom))
-    print(bounding_range)
 
     # Request all supernets
     supernets = IPRange.objects.filter(
@@ -83,7 +100,6 @@ def render_tile(request, zoom, x, y):
 
     # Request the current range
     current_range = IPRange.objects.filter(cidr=str(bounding_range))
-    print(current_range)
 
     # Request all ranges within that range, up to a certain zoom level
     ranges = IPRange.objects.filter(
@@ -103,6 +119,12 @@ def render_tile(request, zoom, x, y):
                 size=(size,size),
                 fill = "rgb(200,200,200)")
     svg_doc.add(rect)
+
+    # List of text elements to add later to the SVG.
+    # We only add them if they have not been covered by another rectangle
+    # added later on.
+    # This list contains (bounding_box,text_element) pairs.
+    text_elements = []
 
     for rng in ranges_to_display:
         if rng.level % 2 == 0:
@@ -140,7 +162,9 @@ def render_tile(request, zoom, x, y):
                 sizex = 2*size
                 sizey = size
 
-        rect = svg_doc.rect(insert = (scale*(x-origx), scale*(y-origy)),
+        posx = scale*(x-origx)
+        posy = scale*(y-origy)
+        rect = svg_doc.rect(insert = (posx,posy),
                     size=(sizex,sizey),
                     stroke_width = "1",
                     stroke = "black",
@@ -148,18 +172,36 @@ def render_tile(request, zoom, x, y):
                     fill_opacity="0.4")
         svg_doc.add(rect)
 
+
+        # Invalidate other text labels that overlap with this box
+        bounding_box = BoundingBox(posx,posy,sizex,sizey)
+        text_elements = list(filter(
+            lambda bt: not bt[0].intersects(bounding_box),
+            text_elements))
+
         # if we have enough space, let's write the name of the
         # institution
         name = rng.short_label
-        if sizex >= 8*len(name):
+        width = 7*len(name)+4
+        if sizex >= width:
+            posx = scale*(x-origx)+sizex/2
+            posy = scale*(y-origy)+sizey/2
             txt = svg_doc.text(name,
-                insert=(scale*(x-origx)+sizex/2,
-                      scale*(y-origy)+sizey/2),
+                insert=(posx,posy),
                 dominant_baseline="middle",
                 text_anchor="middle",
                 font_size="10",
                 opacity="0.8")
-            svg_doc.add(txt)
+            link = svg_doc.a(rng.wikidata_url)
+            link.add(txt)
+            #svg_doc.add(txt)
+            height = 10
+            box = BoundingBox.centered(posx, posy, width, height)
+            text_elements.append((box, link))
+
+    # Add all the remaining texts
+    for _, text in text_elements:
+        svg_doc.add(text)
 
     return HttpResponse(svg_doc.tostring(), content_type="image/svg+xml")
 

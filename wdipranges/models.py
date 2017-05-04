@@ -107,3 +107,7 @@ class IPRange(models.Model):
         if len(initials) > 1:
             return initials
         return self.label
+
+    @property
+    def wikidata_url(self):
+        return "https://www.wikidata.org/wiki/"+self.qid
