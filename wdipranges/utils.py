@@ -1,6 +1,6 @@
 import re
 
-q_re = re.compile(r'(<?https?://www.wikidata.org/entity/)?(Q[0-9]+)>?')
+q_re = re.compile(r'(<?https?://www.wikidata.org/(entity|wiki)/)?(Q[0-9]+)>?')
 
 def to_q(url):
     """
@@ -10,10 +10,12 @@ def to_q(url):
     u'Q1234'
     >>> to_q('<http://www.wikidata.org/entity/Q801> ')
     u'Q801'
+    >>> to_q('<http://www.wikidata.org/wiki/Q801> ')
+    u'Q801'
     """
     if type(url) != str:
         return
     match = q_re.match(url.strip())
     if match:
-        return match.group(2)
+        return match.group(3)
 

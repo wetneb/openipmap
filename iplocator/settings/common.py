@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'netfields',
     'wdipranges',
+    'wpedits',
 ]
 
 MIDDLEWARE = [

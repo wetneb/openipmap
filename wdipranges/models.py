@@ -77,21 +77,53 @@ class IPRange(models.Model):
         # recreate everything
         cls.objects.bulk_create(instances, batch_size=batch_size)
 
+    def latest_edits(self):
+        """
+        Returns a QuerySet of the latest edits from that range
+        """
+        from wpedits.models import AnonEdit
+        return AnonEdit.objects.filter(
+            ip__net_contained=str(self.cidr)).order_by('-timestamp')
+
+    @classmethod
+    def latest_edits_from_qid(cls, qid):
+        """
+        Returns a QuerySet of the latest edits from this Qid
+        """
+        from wpedits.models import AnonEdit
+        from django.db.models import Q
+
+        ranges = cls.objects.filter(qid=qid)
+        range_union = None
+        for rng in ranges:
+            f = Q(ip__net_contained=rng.cidr)
+            if range_union is None:
+                range_union = f
+            else:
+                range_union = range_union | f
+
+        if range_union is None:
+            return []
+        return AnonEdit.objects.filter(f).order_by('-timestamp')
+
 
     def __str__(self):
         return "%s -> %s" % (str(self.cidr),self.qid)
+
+    @property
+    def nice_cidr(self):
+        nice_cidr = IPNetwork(str(self.cidr))
+        if nice_cidr.is_ipv4_mapped():
+            nice_cidr = nice_cidr.ipv4()
+        return nice_cidr
 
     @property
     def types(self):
         return self.types_comma.split(',')
 
     def json(self):
-        nice_cidr = IPNetwork(str(self.cidr))
-        if nice_cidr.is_ipv4_mapped():
-            nice_cidr = nice_cidr.ipv4()
-
         return {
-            'cidr':str(nice_cidr),
+            'cidr':str(self.nice_cidr),
             'qid':self.qid,
             'name':self.label,
             'short_name': self.short_label,

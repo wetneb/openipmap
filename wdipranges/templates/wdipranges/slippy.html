@@ -1,9 +1,14 @@
+{% load static %}
 <!doctype html>
 <html>
 	<head>
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 		<title>WDIP</title>
+		<link rel="stylesheet"
+href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+crossorigin="anonymous">
 		<link rel="stylesheet"
 	    href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css"
 	    integrity="sha512-07I2e+7D8p6he1SIM+1twR5TIrhUQn9+I6yjqD53JQjFiMf8EtC93ty0/5vJTZGF8aAocvHYNEDJajGdNx1IsQ=="
@@ -12,15 +17,84 @@
 	    integrity="sha512-A7vV8IFfih/D732iSSKi20u/ooOfj/AGehOKq0f4vLT1Zr2Y+RX7C+w8A1gaSasGtRUZpF/NZgzSAu4/Gc41Lg=="
 	    crossorigin=""></script>
 		<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+		<script src="{% static "js/leaflet-sidebar.js" %}"></script>
+		<link rel="stylesheet" href="{% static "css/leaflet-sidebar.css" %}" />
+		<link rel="stylesheet" href="{% static "css/font-awesome.min.css" %}" />
+		<link rel="stylesheet" href="{% static "css/wdip.css" %}" />
 	    <style>
-		    #map {
-			    width: 1024px;
-			    height: 1024px;
+		    body {
+			margin: 0;
+			padding: 0;
+			height: 100%;
+		    }
+		    #map, html {
+			height: 100%;
 		    }
 	    </style>
 	</head>
 	<body>
-		<div id='map'></div>
+		<div id="sidebar" class="sidebar collapsed">
+		    <div class="sidebar-tabs">
+			<ul role="tablist">
+			    <li><a href="#home" role="tab"><i class="fa fa-search"></i></a></li>
+			    <li><a href="#about" role="tab"><i class="fa fa-question-circle"></i></a></li>
+			    <li><a href="https://github.com/wetneb" role="tab" target="_blank"><i class="fa fa-github"></i></a></li>
+			</ul>
+
+			<ul role="tablist">
+			    <li><a href="#settings" role="tab"><i class="fa fa-gear"></i></a></li>
+			</ul>
+		    </div>
+
+		    <div class="sidebar-content">
+			<div class="sidebar-pane" id="home">
+			    <h1 class="sidebar-header">
+				<form>
+				    <div class="form-group" style="padding-top: 3px; padding-right:10px;">
+				    	<button class="btn btn-success" type="submit" style="float:right" ><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></button>
+					<div style="overflow: hidden; padding-right: 2px">
+					    <input class="form-control" type="text" placeholder="search…" name="search" />
+					</div>
+				    </div>
+				</form>
+				<span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
+			    </h1>
+				
+		            <div class="sidebar-body">
+			    <p id="institution-placeholder">You can search for IP ranges and institutions, or
+				click on the map to inspect a region.</p>
+			    <div id="current-institution">
+			    </div>
+			    </div>
+			</div>
+
+			<div class="sidebar-pane" id="about">
+			    <h1 class="sidebar-header">About<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+			    <div class="sidebar-body">
+				<p>This is a map of the Internet.</p>
+				<h3>How is it constructed?</h3>
+				<p>The map is inspired by
+				<a href="https://xkcd.com/195/">XKCD's map of the Internet</a>.
+				It wraps the line of IP addresses in a square using the 
+				<a href="https://en.wikipedia.org/wiki/Hilbert_curve">Hilbert curve</a>,
+				a space-filling fractal. This ensures that allocated IP ranges
+				are represented by rectangles on the map.</p>
+				<h3>Where is the data?</h3>
+				<p>The IP ranges and institution metadata are stored in
+				<a href="https://www.wikidata.org">Wikidata</a>, a knowledge base
+				anyone can edit. They are available under the
+				<a href="https://creativecommons.org/publicdomain/zero/1.0/">Creative Commons CC0 license</a>.</p>
+				<h3>How do I contribute?</h3>
+				<p>Blablabla.</p>
+			    </div>
+			</div>
+
+			<div class="sidebar-pane" id="settings">
+			    <h1 class="sidebar-header">Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+			</div>
+		    </div>
+		</div> 
+		<div id="map" class="sidebar-map"></div>
 
 		<script>
 			var mapSize = {{ map_sqrt_size }};
@@ -30,9 +104,9 @@
 				return [y,x];
 			}
 			function ipCoords(coords) {
-				var x = coords[1] * mapSize / 256;
-				var y = (- (coords[0] / 256.)) * mapSize;
-				return [x,y];
+				var x = coords.lng * mapSize / 256;
+				var y = (- (coords.lat / 256.)) * mapSize;
+				return [Math.round(x),Math.round(y)];
 			}
 			var ipv4view = leafletCoords([16744448,32768]).concat([18]);
 			var ipv6view = leafletCoords([9223372036854775808,9223372036854775808]).concat([-30]);
@@ -40,7 +114,7 @@
 
 			var map = L.map('map', {
 			    crs: L.CRS.Simple,
-			    minZoom: -32,
+			    minZoom: -31,
 			    maxZoom: 32,
 			});
 
@@ -57,7 +131,8 @@
 			}
 			gotoCoords(ipv4view);
 			
-			var ipv4or6control = L.control({position: 'topright'});
+			/* Controls */
+			var ipv4or6control = L.control({position: 'topleft'});
 			ipv4or6control.onAdd = function (map) {
 			    var div = L.DomUtil.create('div', 'leaflet-bar');
 			    div.innerHTML = '<a onclick="gotoCoords(ipv4view)">IPv4</a>'+
@@ -65,7 +140,33 @@
 			    return div;
 			}
 			ipv4or6control.addTo(map);
-				
+
+			var sidebar = L.control.sidebar('sidebar').addTo(map);	
+	
+			/* Clicks on the map */
+			var clickPopup = L.popup();
+			function onMapClick(e) {
+			    var realcoords = ipCoords(e.latlng);
+			    $.get('{% url "reverse_api" %}', {'x':realcoords[0],'y':realcoords[1]},
+				success=function(data){ 
+				var res = data.results[0];
+				if(res != null) {
+				    clickPopup.setContent(
+					'<span class="popup-name">'+res.name+'</span><br/>'+
+                                        '<span class="popup-cidr">'+res.cidr+'</span>');
+				}
+				else {
+				    clickPopup.setContent(
+					'<span class="popup-cidr">'+data.ip+'</span>');
+				}
+
+				clickPopup
+				    .setLatLng(e.latlng)
+				    .openOn(map);
+			    });
+			}
+
+			map.on('click', onMapClick);
 
 			/* Displaying coordinates passed as argument */
 			{% if coords %}
@@ -94,13 +195,16 @@
 				+'<br/>on <a href="'+event.url+'" target="_blank">'
 				+event.page_title+'</a>');
 				setTimeout(function(){ marker.remove(); }, 60000);
-				var circle = L.circleMarker(pointer, { radius : 50 }).addTo(map);
+				/* var circle = L.circleMarker(pointer, { radius : 50 }).addTo(map); */
 			}
-			
+			/*
 			var socket = new WebSocket('ws://wikimon.hatnote.com:9050');
 			socket.onmessage = incomingWikipediaEdit;
 			var socket = new WebSocket('ws://wikimon.hatnote.com:9010');
 			socket.onmessage = incomingWikipediaEdit;
+			var socket = new WebSocket('ws://wikimon.hatnote.com:9000');
+			socket.onmessage = incomingWikipediaEdit;
+			*/
 		</script>
 	</body>
 </html>

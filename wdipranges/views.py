@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse, Http404
 from .models import IPRange
-from .forms import LocateForm, TileForm
+from .forms import LocateForm, ReverseForm, TileForm
 from .tiling import ip_range_to_xyz, xyz_to_ip_range
 from .tiling import max_2d_coord
 from .tiling import ip_to_xy
@@ -32,6 +32,10 @@ def ip_fallback(request):
 
 @json_view
 def locate_api(request):
+    """
+    Converts an IP address to map coordinates
+    and returns the containing ranges
+    """
     ip = ip_fallback(request)
     if not ip:
         raise BadRequest("No IP provided")
@@ -39,7 +43,7 @@ def locate_api(request):
 
     coords = ip_to_xy(ip)
     ipv6 = ip.ipv6()
-    qs = IPRange.objects.filter(cidr__net_contains=ipv6)[:64]
+    qs = IPRange.objects.filter(cidr__net_contains=ipv6).order_by('-level')[:64]
     return {
         'ip':str(ip),
         'coordinates' : {
@@ -47,6 +51,28 @@ def locate_api(request):
             'y': coords[1],
         },
         'results':[rng.json() for rng in qs]
+    }
+
+@json_view
+def reverse_api(request):
+    """
+    Gets the IP associated with (x,y) coordinates on the map
+    """
+    params = request.POST if request.method == 'POST' else request.GET
+    reverse_form = ReverseForm(params)
+    if not reverse_form.is_valid():
+        raise BadRequest("Invalid query")
+    x = reverse_form.cleaned_data['x']
+    y = reverse_form.cleaned_data['y']
+    ipv6 = xyz_to_ip_range((x,y,64)).ip
+    qs = IPRange.objects.filter(cidr__net_contains=str(ipv6)).order_by('-level')[:64]
+    return {
+        'coordinates': {
+            'x': x,
+            'y': y,
+        },
+        'ip': str(ipv6),
+        'results':[rng.json() for rng in qs],
     }
 
 def slippy_map(request):
@@ -96,10 +122,7 @@ def render_tile(request, zoom, x, y):
 
     # Request all supernets
     supernets = IPRange.objects.filter(
-        cidr__net_contains=str(bounding_range)).order_by('level')
-
-    # Request the current range
-    current_range = IPRange.objects.filter(cidr=str(bounding_range))
+        cidr__net_contains_or_equals=str(bounding_range)).order_by('level')
 
     # Request all ranges within that range, up to a certain zoom level
     ranges = IPRange.objects.filter(
@@ -107,7 +130,7 @@ def render_tile(request, zoom, x, y):
         level__lt=bounding_range.prefixlen + 11).order_by('level')
 
     # All the ranges we need to display
-    ranges_to_display = list(supernets)+list(current_range)+list(ranges)
+    ranges_to_display = list(supernets)+list(ranges)
 
     # Draw the SVG
     size = 256
