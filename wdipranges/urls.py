@@ -1,4 +1,4 @@
-"""iplocator URL Configuration
+"""openipmap URL Configuration
 
 """
 from django.conf.urls import url
