@@ -1,0 +1,39 @@
+<h4>Known ranges</h4>
+<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+{% for inst in results %}
+    <div class="panel panel-default">
+	<div class="panel-heading" role="tab" id="institution-{{ inst.qid }}">
+            <span class="panel-title">
+                <a role="button" data-toggle="collapse" data-parent="#accordion"
+                    href="#inst-collapse-{{ inst.qid }}"
+                    aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                    aria-controls="inst-collapse-{{ inst.qid }}">
+		{{ inst.name }}
+                </a>
+            </span>
+	</div>
+	<div id="inst-collapse-{{ inst.qid }}" class="panel-collapse collapse {% if forloop.first %}in{% endif %}"
+            role="tabpanel" aria-labelledby="institution-{{ inst.qid }}">
+                <div class="panel-body no-padding">
+                   <table class="table" style="margin-bottom: 0px">
+                        <tr>
+                            <td class="tdfa"><i class="fa fa-hdd-o"></i></td>
+                            <td><span class="cidr">{{ inst.cidr }}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="tdfa"><i class="fa fa-barcode"></i></td>
+                            <td><a href="https://www.wikidata.org/wiki/{{ inst.qid }}" target="_blank">{{ inst.qid }}</a></td>
+                        </tr>
+                        
+                    </table>
+                </div>
+	</div>
+    </div>
+{% endfor %}
+</div>
+
+<h4>Missing ranges from WHOIS</h4>
+<div id="missing-whois">
+    <p>Looking up…
+</div>
+

@@ -4,4 +4,6 @@ psycopg2
 SPARQLWrapper
 django-jsonview
 django-ipware
+django-jsonfield
+ipwhois
 svgwrite

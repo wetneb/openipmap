@@ -46,8 +46,8 @@ class IPRange(models.Model):
         PREFIX wdt: <http://www.wikidata.org/prop/direct/>
         SELECT ?cidr ?qid ?qidLabel (GROUP_CONCAT(DISTINCT ?type; separator=",")
         AS ?types) WHERE {
-        ?qid (wdt:P3761|wdt:P3793) ?cidr ;
-            wdt:P31 ?type.
+        ?qid (wdt:P3761|wdt:P3793) ?cidr.
+        OPTIONAL { ?qid wdt:P31 ?type. }
         SERVICE wikibase:label { bd:serviceParam wikibase:language
         "en,fr,de,es,nl" }
         }

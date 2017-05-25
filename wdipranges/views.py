@@ -1,10 +1,12 @@
 from django.shortcuts import render
 from django.http import HttpResponse, Http404
 from .models import IPRange
-from .forms import LocateForm, ReverseForm, TileForm
+from .forms import LocateForm, ReverseForm, TileForm, PushRangesForm
 from .tiling import ip_range_to_xyz, xyz_to_ip_range
 from .tiling import max_2d_coord
 from .tiling import ip_to_xy
+from .utils import nice_ip
+from .whois import match_with_whois
 from jsonview.decorators import json_view
 from jsonview.exceptions import BadRequest
 from ipware.ip import get_real_ip
@@ -30,15 +32,10 @@ def ip_fallback(request):
     if locate_form.is_valid():
         return locate_form.cleaned_data['ip']
 
-@json_view
-def locate_api(request):
+def locate(ip):
     """
-    Converts an IP address to map coordinates
-    and returns the containing ranges
+    Finds the IP ranges containing this IP address
     """
-    ip = ip_fallback(request)
-    if not ip:
-        raise BadRequest("No IP provided")
     ip = IPAddress(ip)
 
     coords = ip_to_xy(ip)
@@ -52,6 +49,41 @@ def locate_api(request):
         },
         'results':[rng.json() for rng in qs]
     }
+
+
+
+@json_view
+def locate_api(request):
+    """
+    Converts an IP address to map coordinates
+    and returns the containing ranges
+    """
+    ip = ip_fallback(request)
+    if not ip:
+        raise BadRequest("No IP provided")
+    return locate(ip)
+
+def render_ip_lookup(request):
+    """
+    HTML view of the lookup results
+    """
+    ip = ip_fallback(request)
+    if not ip:
+        raise Http404("No IP provided")
+    context = locate(ip)
+    return render(request, 'wdipranges/institution.html', context=context)
+
+def render_whois(request):
+    """
+    HTML view of the missing ranges from WHOIS
+    """
+    ip = ip_fallback(request)
+    if not ip:
+        raise Http404("No IP provided")
+    context = {}
+    located = locate(ip)
+    context['whois'] = enumerate(match_with_whois(ip, located['results']))
+    return render(request, 'wdipranges/whois.html', context=context)
 
 @json_view
 def reverse_api(request):
@@ -71,9 +103,18 @@ def reverse_api(request):
             'x': x,
             'y': y,
         },
-        'ip': str(ipv6),
+        'ip': nice_ip(ipv6),
         'results':[rng.json() for rng in qs],
     }
+
+@json_view
+def push_ranges_to_wikidata(request):
+    f = PushRangesForm(request.GET)
+    if not f.is_valid():
+        raise BadRequest("Invalid query")
+    from time import sleep
+    sleep(3)
+    return {}
 
 def slippy_map(request):
     ip = ip_fallback(request)
@@ -191,8 +232,8 @@ def render_tile(request, zoom, x, y):
                     size=(sizex,sizey),
                     stroke_width = "1",
                     stroke = "black",
-                    fill = "rgb(255,0,255)",
-                    fill_opacity="0.4")
+                    fill = "rgb(255,190,0)",
+                    fill_opacity="0.5")
         svg_doc.add(rect)
 
 

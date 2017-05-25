@@ -1,0 +1,47 @@
+<div class="panel-group" id="accordion-whois" role="tablist" aria-multiselectable="true">
+{% for idx, missing in whois %}
+    <div class="panel panel-default">
+	<div class="panel-heading" role="tab" id="whois-{{ idx }}">
+            <span class="panel-title">
+                <a role="button" data-toggle="collapse" data-parent="#accordion-whois"
+                    href="#whois-collapse-{{ idx }}"
+                    aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                    aria-controls="whois-collapse-{{ idx }}">
+		<span class="cidr">{{ missing.cidr }}</span>
+                </a>
+            </span>
+	</div>
+	<div id="whois-collapse-{{ idx }}" class="panel-collapse collapse {% if forloop.first %}in{% endif %}"
+            role="tabpanel" aria-labelledby="whois-{{ idx }}">
+                <div class="panel-body no-padding">
+                   <table class="table" style="margin-bottom: 0px; border-bottom: 1px solid #ddd">
+			{% for attr, val in missing.metadata %}
+                        <tr>
+                            <td class="tdfa">{{ attr }}</td>
+                            <td>{{ val }}</td>
+                        </tr>
+                       {% endfor %} 
+		    </table>
+		    <h4 style="padding-left: 7px;">Match range to item</h4>
+		    <table class="table" style="margin-bottom: 0px">
+		       {% for candidate in missing.recon %}
+			   <tr>
+				<td class="tdfa"><a href="#" class="push-qid" data-qid="{{ candidate.id }}" data-range="{{ missing.cidr }}"><i class="fa fa-check"></i></a></td>
+				<td><a href="https://www.wikidata.org/wiki/{{ candidate.id }}" target="_blank">{{ candidate.name }}</a> ({{ candidate.score|floatformat:"0" }})</td>
+			   </tr>
+		       {% endfor %}
+			    <tr>
+				<td class="tdfa"><a href="#"><i class="fa fa-check"></i></a></td>
+				<td><input type="text" class="form-control" /></td>
+			   </tr>
+
+                    </table>
+                </div>
+	</div>
+    </div>
+{% empty %}
+    <p>No missing range.</p>
+{% endfor %}
+</div>
+
+

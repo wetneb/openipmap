@@ -7,6 +7,11 @@ body {
     height: 100%;
 }
 
+/* Map */
+.leaflet-container {
+  cursor: crosshair !important;
+}
+
 /* Sidebar */
 .sidebar-body {
    padding-top: 10px;
@@ -21,11 +26,19 @@ body {
    font-size: 1.1em;
 }
 
+.no-padding {
+    padding: 0px;
+}
+
+#current-institution .tdfa {
+   text-align: right;
+}
+
 /* Institution popup */
 .popup-name {
    font-weight: bold;
 }
 
-.popup-cidr {
+.cidr, .popup-cidr {
    font-family: monospace,Courier;
 }
