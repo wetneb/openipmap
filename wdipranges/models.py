@@ -36,16 +36,23 @@ class IPRange(models.Model):
         super(IPRange, self).__init__(*args, **kwargs)
 
     @classmethod
-    def update_from_wikidata(cls, batch_size=512):
+    def update_from_wikidata(cls, qids=None, batch_size=512):
         """
         Clears up the stored IP ranges and adds
-        fresh ones from Wikidata
+        fresh ones from Wikidata.
+
+        If a list of Qids is provided, we only refresh the
+        IP ranges for these Qids.
         """
+        qid_restriction = ""
+        if qids is not None:
+            qid_restriction = "VALUES ?qid { %s }" % (' '.join(['wd:'+q for q in qids]))
         sparql_query = """
         PREFIX wd: <http://www.wikidata.org/entity/>
         PREFIX wdt: <http://www.wikidata.org/prop/direct/>
         SELECT ?cidr ?qid ?qidLabel (GROUP_CONCAT(DISTINCT ?type; separator=",")
         AS ?types) WHERE {
+        %s
         ?qid (wdt:P3761|wdt:P3793) ?cidr.
         OPTIONAL { ?qid wdt:P31 ?type. }
         SERVICE wikibase:label { bd:serviceParam wikibase:language
@@ -53,14 +60,17 @@ class IPRange(models.Model):
         }
         GROUP BY ?cidr ?qid ?qidLabel
         ORDER BY ?qid
-        """
+        """ % qid_restriction
         sparql = SPARQLWrapper("https://query.wikidata.org/bigdata/namespace/wdq/sparql")
         sparql.setQuery(sparql_query)
         sparql.setReturnFormat(JSON)
         results = sparql.query().convert()
 
         # clear up everything
-        cls.objects.all().delete()
+        if qids is None:
+            cls.objects.all().delete()
+        else:
+            cls.objects.filter(qid__in=qids).delete()
 
         instances = []
         for result in results['results']['bindings']:

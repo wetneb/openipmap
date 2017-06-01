@@ -7,3 +7,4 @@ django-ipware
 django-jsonfield
 ipwhois
 svgwrite
+pywikibot

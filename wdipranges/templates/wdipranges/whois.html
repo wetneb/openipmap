@@ -26,7 +26,7 @@
 		    <table class="table" style="margin-bottom: 0px">
 		       {% for candidate in missing.recon %}
 			   <tr>
-				<td class="tdfa"><a href="#" class="push-qid" data-qid="{{ candidate.id }}" data-range="{{ missing.cidr }}"><i class="fa fa-check"></i></a></td>
+				<td class="tdfa"><a href="#" class="push-qid" data-qid="{{ candidate.id }}" data-range="{{ missing.cidr }}" {% if missing.created %}data-created="{{ missing.created }}"{% endif %}><i class="fa fa-check"></i></a></td>
 				<td><a href="https://www.wikidata.org/wiki/{{ candidate.id }}" target="_blank">{{ candidate.name }}</a> ({{ candidate.score|floatformat:"0" }})</td>
 			   </tr>
 		       {% endfor %}

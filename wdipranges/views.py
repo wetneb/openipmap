@@ -7,6 +7,7 @@ from .tiling import max_2d_coord
 from .tiling import ip_to_xy
 from .utils import nice_ip
 from .whois import match_with_whois
+from .push import add_ranges
 from jsonview.decorators import json_view
 from jsonview.exceptions import BadRequest
 from ipware.ip import get_real_ip
@@ -107,14 +108,30 @@ def reverse_api(request):
         'results':[rng.json() for rng in qs],
     }
 
+def make_reference_url_for_range(rng):
+    """
+    Constructs the URL of WHOIS lookup for a given range
+    """
+    ip = str(IPNetwork(rng).ip)
+    return "https://tools.wmflabs.org/whois/gateway.py?lookup=true&ip="+ip
+
 @json_view
 def push_ranges_to_wikidata(request):
     f = PushRangesForm(request.GET)
     if not f.is_valid():
         raise BadRequest("Invalid query")
-    from time import sleep
-    sleep(3)
-    return {}
+    ranges = {
+        rng : make_reference_url_for_range(rng)
+        for rng in f.cleaned_data['ipranges']
+    }
+    created_dates = {
+        rng : f.cleaned_data['created']
+        for rng in f.cleaned_data['ipranges']
+    }
+    print(created_dates)
+    add_ranges(f.cleaned_data['qid'], ranges, created_dates)
+    IPRange.update_from_wikidata(qids=[f.cleaned_data['qid']])
+    return {'status':'ok'}
 
 def slippy_map(request):
     ip = ip_fallback(request)

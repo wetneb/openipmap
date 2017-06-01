@@ -18,6 +18,10 @@ class TileForm(forms.Form):
 class PushRangesForm(forms.Form):
     qid = forms.CharField()
     ipranges = forms.CharField()
+    created = forms.DateTimeField(required=False,
+        input_formats=['%Y-%m-%dT%H:%M:%SZ',
+                        '%Y-%m-%d',
+                        '%Y%m%d'])
 
     def clean_qid(self):
         qid = to_q(self.cleaned_data['qid'])
@@ -32,4 +36,8 @@ class PushRangesForm(forms.Form):
             return converted
         except netaddr.core.AddrFormatError:
             raise forms.ValidationError('Invalid IP range')
+
+    def clean_created(self):
+        if self.cleaned_data['created']:
+            return self.cleaned_data['created'].date()
 

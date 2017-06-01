@@ -6,6 +6,7 @@ from collections import defaultdict
 import sys
 import io
 import pywikibot
+from datetime import date
 from pywikibot import pagegenerators as pg
 
 site = pywikibot.Site("wikidata", "wikidata")
@@ -15,11 +16,31 @@ site.login()
 ipv4_pid = 'P3761'
 ipv6_pid = 'P3793'
 url_ref_pid = 'P854'
+retrieved_pid = 'P813'
+start_date_pid = 'P580'
 summary = 'merged IP ranges'
 
-def add_ranges(qid, ranges):
+def check_safe_type(qid):
+    query = ("""
+    SELECT ?item WHERE {
+       wd:%s wdt:P31 ?item .
+       { ?item wdt:P279* wd:Q1048835 } UNION
+       { ?item wdt:P279* wd:Q847017 }
+    }""" % qid)
+    for page in pg.WikidataSPARQLPageGenerator(query, site=site):
+        return False
+    return True
+
+
+def wbtime_of_date(python_date):
+    wbtime = pywikibot.WbTime(year=python_date.year,
+        month=python_date.month, day=python_date.day, precision='day')
+    return wbtime
+
+def add_ranges(qid, ranges, created_dates={}):
     """
     Ranges is supposed to be a dict "range" -> "reference URL"
+    Created_dates is a dict "range" -> date of creation
     """
     item = pywikibot.ItemPage(repo, qid)
     # first, compute the new list of merged ranges
@@ -36,10 +57,7 @@ def add_ranges(qid, ranges):
     print('merged ranges')
     print(merged_new_ranges)
 
-    # if there are a lot of new ranges, this is suspicious
-    if len(merged_new_ranges) > 5:
-        print("SKIPPING, too many ranges")
-        return
+    # if the type is dangerous, skip
     if not check_safe_type(item.title()):
         print("Ignoring item: dangerous type")
         return
@@ -55,6 +73,13 @@ def add_ranges(qid, ranges):
             new_claim = pywikibot.Claim(repo, pid)
             new_claim.setTarget(str(rng))
             item.addClaim(new_claim)
+
+            # add created date if provided
+            created_date = created_dates.get(rng)
+            if created_date:
+                start_claim = pywikibot.Claim(repo, start_date_pid)
+                start_claim.setTarget(wbtime_of_date(created_date))
+                new_claim.addQualifier(start_claim)
 
             # gather all the sources from the previously overlapping
             # claims
@@ -73,7 +98,10 @@ def add_ranges(qid, ranges):
                 if rng in added_range.supernet() or rng == added_range:
                     source_claim = pywikibot.Claim(repo, url_ref_pid)
                     source_claim.setTarget(source_url)
-                    new_claim.addSource(source_claim)
+                    date_claim = pywikibot.Claim(repo, retrieved_pid)
+                    retrieved_date = wbtime_of_date(date.today())
+                    date_claim.setTarget(retrieved_date)
+                    new_claim.addSources([source_claim, date_claim])
 
     # remove old claims
     if claims_to_remove:

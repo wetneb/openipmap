@@ -21,6 +21,7 @@ FIELDS_ORDER = [
     'name',
     'description',
     'address',
+    'city',
     'country',
     'created',
 ]
@@ -47,10 +48,9 @@ def match_with_whois(ip, known_ranges):
     whois = lookup_whois(ip)
     known = set(
         str(rng['cidr']) for rng in known_ranges)
-    new_ranges = list(filter(lambda net: net['cidr'] not in known,
+    new_ranges = list(filter(lambda net: not set(net['cidr'].split(', ')) & known,
         whois['nets']))
     fetch_reconciled_proposals(new_ranges)
-    print(new_ranges)
     return map(render_whois_candidate, new_ranges)
 
 def render_whois_candidate(candidate):
@@ -65,6 +65,7 @@ def render_whois_candidate(candidate):
             result.append((field, val))
     return {
         'cidr':candidate.get('cidr'),
+        'created':candidate.get('created'),
         'metadata':result,
         'recon':candidate.get('recon'),
     }
@@ -86,8 +87,6 @@ def fetch_reconciled_proposals(candidates):
         }
     r = requests.get('https://tools.wmflabs.org/openrefine-wikidata/en/api',
         {'queries':json.dumps(queries)})
-    print(r.url)
-    print(r.text)
     js = r.json()
     # Put back the reconciliation results in the candidates
     for idx, candidate in enumerate(candidates):
