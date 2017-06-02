@@ -76,7 +76,7 @@ def add_ranges(qid, ranges, created_dates={}):
 
             # add created date if provided
             created_date = created_dates.get(rng)
-            if created_date:
+            if created_date and created_date.year > 1970: # avoid epoch
                 start_claim = pywikibot.Claim(repo, start_date_pid)
                 start_claim.setTarget(wbtime_of_date(created_date))
                 new_claim.addQualifier(start_claim)

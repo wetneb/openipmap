@@ -13,8 +13,10 @@
 	    integrity="sha512-A7vV8IFfih/D732iSSKi20u/ooOfj/AGehOKq0f4vLT1Zr2Y+RX7C+w8A1gaSasGtRUZpF/NZgzSAu4/Gc41Lg=="
 	    crossorigin=""></script>
 		<script src="{% static "js/leaflet-sidebar.js" %}"></script>
+		<script src="{% static "js/select2.min.js" %}"></script>
 		<link rel="stylesheet" href="{% static "css/leaflet-sidebar.css" %}" />
 		<link rel="stylesheet" href="{% static "css/font-awesome.min.css" %}" />
+		<link rel="stylesheet" href="{% static "css/select2.min.css" %}" />
 		<link rel="stylesheet" href="{% static "css/wdip.css" %}" />
 	</head>
 	<body>
@@ -132,6 +134,48 @@
 
 			var sidebar = L.control.sidebar('sidebar').addTo(map);	
 
+			/* Item autocompletion */
+			var wdFormatter = function( item ) {
+                                if ( !item.data ) {
+                                        return item.text;
+                                }
+                                return $( '<span><b>' + item.text +
+					' (' + item.data.id + ')' + '</b></span><br/><small>' +
+                                                item.data.description + '</small>' );
+                        };
+			function setupAutocompletion() {
+			    $('.qid-select').select2({
+			    ajax: {
+				url: "https://www.wikidata.org/w/api.php",
+				dataType: "jsonp",
+				delay: 250,
+				data: function(params) {
+				    return {
+					action: "wbsearchentities",
+					language: "en",
+					format: "json",
+					search: params.term
+				    }
+				},
+				processResults: function(data, params) {
+				    return {
+					results: data.search.map( function( d ) {
+					    return {
+						    id: d.id,
+						    text: d.label,
+						    data: d
+					    }
+					})
+				    }
+				},
+				cache: true,
+			    },
+			    escapeMarkup: function(markup) { return markup; },
+			    minimumInputLength: 1,
+			    templateResult: wdFormatter,
+			    });
+			}
+
 			/* IP inspection */
 			var currentInst = $('#current-institution');
 			var knownRanges = $('#known-ranges');
@@ -149,6 +193,7 @@
 				    $.get('{% url "render_whois" %}', {'ip':ip},
 					   success=function(data){
 					missingWhois.html(data);
+					setupAutocompletion();
 				    }).fail(function(){
 					missingWhois.html('<p>WHOIS query failed.</p>');
 				    });
@@ -159,27 +204,27 @@
 			}
 
 			/* IP editing */
-			function editQID(qid, ipranges, created) {
+			function editQID(qid, ipranges, created, idx) {
 			        // Set up waiting dialog
-				var waitingDialog = $('<div class="modal hide" id="pleaseWaitDialog" data-backdrop="static" data-keyboard="false"><div class="modal-header"><h1>Editing Wikidata...</h1></div><div class="modal-body"><div class="progress progress-striped active"><div class="bar" style="width: 100%;"></div> </div></div> </div>');
-				
-				waitingDialog.modal();
+			        var waitingArea = $('#waiting-'+idx);
+				waitingArea.show();
 				$.get('{% url "push_ranges_to_wikidata" %}',
 					{qid: qid, ipranges: ipranges, created:created},
 				     success= function(data){
-					console.log('success');
-					console.log(data);
-					waitingDialog.modal('hide');
+					waitingArea.hide();
 				}).fail(function(data) {
-					waitingDialog.modal('hide');
-					console.log(data);
+					waitingArea.hide();
 				});
 			}
 			$('#sidebar').on('click', '.push-qid', function(evt) {
-			        var qid = evt.currentTarget.getAttribute('data-qid');
+			        var field = evt.currentTarget.getAttribute('data-field');
+				console.log(field);
+				var qid = $('#'+field).val();
+				console.log(qid);
 			        var ranges = evt.currentTarget.getAttribute('data-range');
 			        var created = evt.currentTarget.getAttribute('data-created');
-				editQID(qid, ranges, created);	
+				var idx = evt.currentTarget.getAttribute('data-idx');
+				editQID(qid, ranges, created, idx);	
 			});
 
 					    

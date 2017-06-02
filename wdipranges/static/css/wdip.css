@@ -42,3 +42,8 @@ body {
 .cidr, .popup-cidr {
    font-family: monospace,Courier;
 }
+
+/* editing autocompletion */
+.select2-dropdown {
+   z-index: 2000 !important;
+}

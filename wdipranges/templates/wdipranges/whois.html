@@ -26,16 +26,21 @@
 		    <table class="table" style="margin-bottom: 0px">
 		       {% for candidate in missing.recon %}
 			   <tr>
-				<td class="tdfa"><a href="#" class="push-qid" data-qid="{{ candidate.id }}" data-range="{{ missing.cidr }}" {% if missing.created %}data-created="{{ missing.created }}"{% endif %}><i class="fa fa-check"></i></a></td>
-				<td><a href="https://www.wikidata.org/wiki/{{ candidate.id }}" target="_blank">{{ candidate.name }}</a> ({{ candidate.score|floatformat:"0" }})</td>
+				<td class="tdfa"><a href="#" class="push-qid" data-field="input-{{ idx }}-{{ candidate.id }}" data-range="{{ missing.cidr }}" {% if missing.created %}data-created="{{ missing.created }}"{% endif %} data-idx="{{ idx }}"><i class="fa fa-check"></i></a></td>
+				<td><a href="https://www.wikidata.org/wiki/{{ candidate.id }}" target="_blank">{{ candidate.name }}</a> ({{ candidate.score|floatformat:"0" }})
+			<input type="hidden" id="input-{{ idx }}-{{ candidate.id }}" value="{{ candidate.id }}" /></td>
 			   </tr>
 		       {% endfor %}
 			    <tr>
-				<td class="tdfa"><a href="#"><i class="fa fa-check"></i></a></td>
-				<td><input type="text" class="form-control" /></td>
+				<td class="tdfa"><a href="#" class="push-qid" data-range="{{ missing.cidr }}" data-created="{{ missing.created }}" data-field="input-{{ idx }}-new" data-idx="{{ idx }}"><i class="fa fa-check"></i></a></td>
+				<td><select class="form-control qid-select" id="input-{{ idx }}-new" /></td>
 			   </tr>
-
                     </table>
+		    <div id="waiting-{{ idx }}" class="progress" style="display: none">
+			<div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">
+			    <span class="sr-only">Saving to Wikidata</span>
+		        </div>
+		    </div>
                 </div>
 	</div>
     </div>
